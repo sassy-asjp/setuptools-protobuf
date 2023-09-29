@@ -1,5 +1,6 @@
 import os
 import platform
+from pathlib import Path
 import subprocess
 import sys
 import urllib.request
@@ -26,6 +27,7 @@ class build_protobuf(Command):
             or get_protoc(getattr(self.distribution, 'protoc_version'))
             or find_executable('protoc'))
         self.outfiles = []
+        self.cwd = Path(self.distribution.protobuf_srcdir or "./")
 
     def finalize_options(self):
         if self.protoc is None or not os.path.exists(self.protoc):
@@ -35,10 +37,10 @@ class build_protobuf(Command):
 
     def run(self):
         for protobuf in getattr(self.distribution, 'protobufs', []):
-            source_mtime = os.path.getmtime(protobuf.path)
+            source_mtime = os.path.getmtime(self.cwd / protobuf.path)
             for output in protobuf.outputs():
                 try:
-                    output_mtime = os.path.getmtime(output)
+                    output_mtime = os.path.getmtime(self.cwd / output)
                 except FileNotFoundError:
                     break
                 else:
@@ -54,7 +56,7 @@ class build_protobuf(Command):
                 'creating %r from %s\n' % (protobuf.outputs(), protobuf.path))
             # TODO(jelmer): Support e.g. building mypy ?
             try:
-                subprocess.check_call(command, )
+                subprocess.check_call(command, cwd=self.cwd)
             except subprocess.CalledProcessError as e:
                 raise ExecError(f'error running protoc: {e.returncode}')
             self.outfiles.extend(protobuf.outputs())
@@ -91,6 +93,7 @@ def load_pyproject_config(dist: Distribution, cfg) -> None:
     dist.protoc_version = cfg.get("protoc_version")  # type: ignore
     dist.protobufs = [  # type: ignore
         Protobuf(pb, mypy=mypy) for pb in cfg.get("protobufs")]
+    dist.protobuf_srcdir = cfg.get("srcdir")
 
 
 def pyprojecttoml_config(dist: Distribution) -> None:
