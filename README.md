@@ -54,6 +54,7 @@ requires = ["setuptools", "setuptools-protobuf"]
 
 [tool.setuptools-protobuf]
 protobufs = ["example/foo.proto"]
+<<<<<<< HEAD
 
 # Require the generation of typing hints:
 mypy = true
